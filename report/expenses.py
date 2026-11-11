@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
 
@@ -36,6 +36,21 @@ def parse_row(row: dict[str, str], line: int) -> Expense:
 def read_expenses(path: Path) -> list[Expense]:
     with path.open(newline="", encoding="utf-8") as f:
         return [parse_row(row, n) for n, row in enumerate(csv.DictReader(f), start=2)]
+
+
+def totals_by_currency(expenses: list[Expense]) -> dict[str, Decimal]:
+    totals: dict[str, Decimal] = {}
+    for e in expenses:
+        totals[e.currency] = totals.get(e.currency, Decimal(0)) + e.amount
+    return dict(sorted(totals.items()))
+
+
+def format_totals(expenses: list[Expense]) -> list[str]:
+    cents = Decimal("0.01")
+    return [
+        f"{code} {total.quantize(cents, rounding=ROUND_HALF_UP)}"
+        for code, total in totals_by_currency(expenses).items()
+    ]
 
 
 def summary(expenses: list[Expense]) -> str:
